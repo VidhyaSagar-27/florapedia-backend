@@ -22,12 +22,11 @@ app.use("/api/orders", orderRoutes);
 app.get("/", (req, res) => {
   res.send("Florapedia Backend Running");
 });
+
 console.log("Connecting to MongoDB...");
 
 // Database connection
 mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 30000
 })
 .then(() => {
