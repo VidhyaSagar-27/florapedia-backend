@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-const Order = require("../models/Order");
+const Order = require("../models/orderModel");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
-// ===============================
+// ===============================+
 // CREATE ORDER
 // ===============================
 router.post("/", authMiddleware, async (req, res) => {
