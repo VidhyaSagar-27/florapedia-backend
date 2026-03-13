@@ -8,21 +8,25 @@ const router = express.Router();
 
 
 // ===============================
-// REGISTER USER
+// SIGNUP
 // ===============================
-router.post("/register", async (req, res) => {
+router.post("/signup", async (req, res) => {
   try {
 
-    const { name, email, password, role } = req.body;
+    const { name, email, phone, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password are required" });
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({
+        message: "Name, email, phone and password are required"
+      });
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        message: "User already exists"
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -30,6 +34,7 @@ router.post("/register", async (req, res) => {
     const user = new User({
       name,
       email,
+      phone,
       password: hashedPassword,
       role: role || "customer"
     });
@@ -41,33 +46,51 @@ router.post("/register", async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message
+    });
+
   }
 });
 
 
 // ===============================
-// LOGIN USER
+// LOGIN
 // ===============================
 router.post("/login", async (req, res) => {
+
   try {
 
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
+      return res.status(400).json({
+        message: "Email and password required"
+      });
     }
 
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials"
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials"
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined");
     }
 
     const token = jwt.sign(
@@ -88,32 +111,16 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message
+    });
+
   }
-});
 
-
-// ===============================
-// GET CURRENT USER
-// ===============================
-router.get("/me", async (req, res) => {
-  try {
-
-    const token = req.headers.authorization;
-
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id).select("-password");
-
-    res.json(user);
-
-  } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
-  }
 });
 
 module.exports = router;

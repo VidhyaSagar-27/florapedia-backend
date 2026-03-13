@@ -1,5 +1,32 @@
 const mongoose = require("mongoose");
 
+const reviewSchema = new mongoose.Schema({
+
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+
+  name: {
+    type: String
+  },
+
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  },
+
+  comment: {
+    type: String
+  }
+
+}, { timestamps: true });
+
+
+
 const productSchema = new mongoose.Schema({
 
   name: {
@@ -8,25 +35,42 @@ const productSchema = new mongoose.Schema({
     trim: true
   },
 
+  description: {
+    type: String,
+    required: true
+  },
+
   price: {
     type: Number,
     required: true,
     min: 0
   },
 
-  description: {
-    type: String,
-    required: true
+  discountPrice: {
+    type: Number,
+    default: 0
   },
 
-  image: {
-    type: String,
-    required: true
-  },
+  images: [
+    {
+      type: String
+    }
+  ],
 
   category: {
     type: String,
-    default: "Plants"
+    default: "General"
+  },
+
+  tags: [
+    {
+      type: String
+    }
+  ],
+
+  unit: {
+    type: String,
+    default: "piece"
   },
 
   stock: {
@@ -41,9 +85,27 @@ const productSchema = new mongoose.Schema({
     required: true
   },
 
+  shop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Shop",
+    required: true
+  },
+
+  reviews: [reviewSchema],
+
   rating: {
     type: Number,
     default: 0
+  },
+
+  ratingCount: {
+    type: Number,
+    default: 0
+  },
+
+  deliveryTime: {
+    type: Number,
+    default: 30
   },
 
   isActive: {
