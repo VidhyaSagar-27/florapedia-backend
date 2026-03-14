@@ -37,17 +37,18 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     const product = new Product({
-      name,
-      price,
-      description,
-      images,
-      category,
-      stock,
-      unit,
-      discountPrice,
-      shop,
-      seller: req.user.id
-    });
+  name,
+  price,
+  description,
+  images,
+  category,
+  stock,
+  unit,
+  discountPrice,
+  shop,
+  seller: req.user.id,
+  isActive: true
+});
 
     const savedProduct = await product.save();
 
@@ -112,9 +113,8 @@ router.get("/", async (req, res) => {
     } = req.query;
 
     const query = {
-      isActive: true
-    };
-
+  isActive: { $ne: false }
+};
     if (search) {
       query.name = {
         $regex: search,
