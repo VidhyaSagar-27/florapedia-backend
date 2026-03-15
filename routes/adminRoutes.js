@@ -1,137 +1,55 @@
 const express = require("express");
 const router = express.Router();
-
-const Order = require("../models/orderModel");
+const Order = require("../models/Order");
 const Product = require("../models/Product");
 const User = require("../models/User");
+const Shop = require("../models/Shop");
+const auth = require("../middleware/authMiddleware");
 
-const authMiddleware = require("../middleware/authMiddleware");
-
-
-// ===============================
-// ADMIN CHECK MIDDLEWARE
-// ===============================
 const adminOnly = (req, res, next) => {
-
-  if (req.user.role !== "admin") {
-    return res.status(403).json({
-      message: "Admin access required"
-    });
-  }
-
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Admin only" });
   next();
 };
 
-
-
-// ===============================
-// DASHBOARD STATS
-// ===============================
-router.get("/stats", authMiddleware, adminOnly, async (req, res) => {
-
+router.get("/stats", auth, adminOnly, async (req, res) => {
   try {
-
-    const totalUsers = await User.countDocuments();
-    const totalProducts = await Product.countDocuments();
-    const totalOrders = await Order.countDocuments();
-
-    const revenueData = await Order.aggregate([
-      {
-        $match: { paymentStatus: "paid" }
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$totalAmount" }
-        }
-      }
+    const [totalUsers, totalProducts, totalOrders, totalShops, revenue] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments({ isActive: true }),
+      Order.countDocuments(),
+      Shop.countDocuments(),
+      Order.aggregate([{ $match: { paymentStatus: "paid" } }, { $group: { _id: null, total: { $sum: "$totalAmount" } } }])
     ]);
-
-    const totalRevenue = revenueData[0]?.totalRevenue || 0;
-
-    res.json({
-      totalUsers,
-      totalProducts,
-      totalOrders,
-      totalRevenue
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: error.message
-    });
-
-  }
-
+    res.json({ totalUsers, totalProducts, totalOrders, totalShops, totalRevenue: revenue[0]?.total || 0 });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-
-
-// ===============================
-// RECENT ORDERS
-// ===============================
-router.get("/recent-orders", authMiddleware, adminOnly, async (req, res) => {
-
+router.get("/users", auth, adminOnly, async (req, res) => {
   try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
 
-    const orders = await Order.find()
-      .populate("user", "name email")
-      .sort({ createdAt: -1 })
-      .limit(10);
-
+router.get("/orders", auth, adminOnly, async (req, res) => {
+  try {
+    const orders = await Order.find().populate("user","name email").populate("items.product").sort({ createdAt: -1 }).limit(50);
     res.json(orders);
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: error.message
-    });
-
-  }
-
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-
-
-// ===============================
-// MONTHLY SALES
-// ===============================
-router.get("/monthly-sales", authMiddleware, adminOnly, async (req, res) => {
-
+router.delete("/products/:id", auth, adminOnly, async (req, res) => {
   try {
-
-    const sales = await Order.aggregate([
-
-      {
-        $match: { paymentStatus: "paid" }
-      },
-
-      {
-        $group: {
-          _id: { $month: "$createdAt" },
-          revenue: { $sum: "$totalAmount" },
-          orders: { $sum: 1 }
-        }
-      },
-
-      {
-        $sort: { "_id": 1 }
-      }
-
-    ]);
-
-    res.json(sales);
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: error.message
-    });
-
-  }
-
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: "Product deleted" });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+router.delete("/users/:id", auth, adminOnly, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
 
 module.exports = router;
